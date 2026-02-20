@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { ethers } from "ethers";
+import { ethers, type Contract } from "ethers";
 
 const CONTRACT_ADDRESS = "0xCe3ec4934E5bf5daD3dDBdCDe86Ae7FB5E33B6E5";
 
@@ -569,37 +569,40 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-
-const getProviderOrSigner = async (needSigner = false): Promise<ethers.providers.Provider | ethers.Signer> => {
+const getProviderOrSigner = async (
+  needSigner = false
+): Promise<ethers.JsonRpcSigner | ethers.Provider> => {
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
 
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-
+  // Connect to MetaMask
+  const provider = new ethers.BrowserProvider(window.ethereum);
   if (needSigner) {
-    await window.ethereum.request({ method: "eth_requestAccounts" });
-    return provider.getSigner();
+    const signer = await provider.getSigner();
+    return signer;
   }
 
   return provider;
 };
-
-
-const getContract = async (needSigner = false): Promise<ethers.Contract> => {
+const getContract = async (needSigner = false): Promise<Contract> => {
   const providerOrSigner = await getProviderOrSigner(needSigner);
   return new ethers.Contract(CONTRACT_ADDRESS, ImageNFTABI, providerOrSigner);
 };
 
-export const mintNFT = async (imageUrl: string): Promise<{ success: boolean; message: string }> => {
+export const mintNFT = async (
+  imageUrl: string
+): Promise<{ success: boolean; message: string }> => {
   try {
     const contract = await getContract(true); 
     const currentTokenId = await contract.getCurrentTokenId();
-        console.log(`Next Token ID: ${currentTokenId}`);
+    console.log(`Next Token ID: ${currentTokenId}`);
+
     const tx = await contract.mintNFT(imageUrl);
     console.log("Transaction sent. Waiting for confirmation...");
     await tx.wait();
     console.log("Transaction confirmed. NFT minted!");
+
     return {
       success: true,
       message: `NFT minted successfully! Token ID: ${currentTokenId}`,
