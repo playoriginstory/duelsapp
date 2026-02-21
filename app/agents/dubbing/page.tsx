@@ -142,11 +142,27 @@ export default function DubbingAgent() {
       const dubRes = await fetch("/api/dub", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoUrl: fileUrl, target_lang: targetLang, source_lang: "auto" }),
+        body: JSON.stringify({
+          videoUrl: fileUrl,
+          target_lang: targetLang,
+          source_lang: "auto",
+        }),
       });
-      const data = await dubRes.json();
-      if (!data?.dubbing_id) throw new Error("Dubbing failed — missing dubbing_id");
-
+      
+      console.log("DUB response status:", dubRes.status);
+      console.log("DUB response ok:", dubRes.ok);
+      
+      const data = await dubRes.json().catch((e) => {
+        console.error("Failed to parse JSON:", e);
+        return null;
+      });
+      
+      console.log("DUB response data:", data);
+      
+      if (!data?.dubbing_id) {
+        throw new Error("Dubbing failed — missing dubbing_id");
+      }
+      
       setResult(data);
 
       // 4️⃣ Start polling with S3 key
