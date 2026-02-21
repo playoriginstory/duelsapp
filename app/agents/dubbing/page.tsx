@@ -11,7 +11,6 @@ export default function DubbingAgent() {
   const [progress, setProgress] = useState(0);
   const [fileSizeMB, setFileSizeMB] = useState<number | null>(null);
 
-  const MAX_FILE_SIZE_MB = 50;
   const MAX_VIDEO_DURATION_SEC = 600;
 
   const LANGUAGES = [
@@ -23,26 +22,26 @@ export default function DubbingAgent() {
     { code: "fr", name: "French" },
     { code: "de", name: "German" },
     { code: "ja", name: "Japanese" },
-    { code: "ar", name: "Arabic" },
-    { code: "ru", name: "Russian" },
-    { code: "ko", name: "Korean" },
-    { code: "id", name: "Indonesian" },
-    { code: "it", name: "Italian" },
-    { code: "nl", name: "Dutch" },
-    { code: "tr", name: "Turkish" },
-    { code: "pl", name: "Polish" },
-    { code: "sv", name: "Swedish" },
-    { code: "fil", name: "Filipino" },
-    { code: "ms", name: "Malay" },
-    { code: "ro", name: "Romanian" },
-    { code: "uk", name: "Ukrainian" },
-    { code: "el", name: "Greek" },
-    { code: "cs", name: "Czech" },
-    { code: "da", name: "Danish" },
-    { code: "fi", name: "Finnish" },
-    { code: "bg", name: "Bulgarian" },
-    { code: "hr", name: "Croatian" },
-    { code: "sk", name: "Slovak" },
+    { code: "ar", name: "Arabic" }, 
+    { code: "ru", name: "Russian" }, 
+    {code: "ko", name: "Korean" },
+    { code: "id", name: "Indonesian"},
+    { code: "it", name: "Italian" }, 
+    { code: "nl", name: "Dutch" }, 
+    { code: "tr", name: "Turkish" }, 
+    { code: "pl", name: "Polish" }, 
+    { code: "sv", name: "Swedish" }, 
+    { code: "fil", name: "Filipino" }, 
+    { code: "ms", name: "Malay" }, 
+    { code: "ro", name: "Romanian" }, 
+    { code: "uk", name: "Ukrainian"}, 
+    { code: "el", name: "Greek" }, 
+    { code: "cs", name: "Czech" }, 
+    { code: "da", name: "Danish" }, 
+    { code: "fi", name: "Finnish" }, 
+    { code: "bg", name: "Bulgarian" }, 
+    { code: "hr", name: "Croatian" }, 
+    { code: "sk", name: "Slovak" }, 
     { code: "ta", name: "Tamil" },
   ];
 
@@ -68,86 +67,152 @@ export default function DubbingAgent() {
     const sizeMB = selectedFile.size / (1024 * 1024);
     setFileSizeMB(sizeMB);
 
-    if (sizeMB > MAX_FILE_SIZE_MB)
-      return alert(`File too large! Max ${MAX_FILE_SIZE_MB} MB`);
-
-    if (!selectedFile.type.startsWith("audio/") && !selectedFile.type.startsWith("video/"))
-      return alert("Unsupported file type. Upload audio or video.");
+    if (!selectedFile.type.startsWith("audio/") && !selectedFile.type.startsWith("video/")) {
+      alert("Unsupported file type.");
+      return;
+    }
 
     if (selectedFile.type.startsWith("video/")) {
       try {
         const duration = await getVideoDuration(selectedFile);
-        if (duration > MAX_VIDEO_DURATION_SEC)
-          return alert(`Video too long! Max ${MAX_VIDEO_DURATION_SEC / 60} minutes`);
+        if (duration > MAX_VIDEO_DURATION_SEC) {
+          alert(`Video too long. Max ${MAX_VIDEO_DURATION_SEC / 60} minutes.`);
+          return;
+        }
       } catch {
-        return alert("Failed to read video duration");
+        alert("Failed to read video duration");
+        return;
       }
     }
 
     setFile(selectedFile);
   };
 
-  const handleSubmit = async () => {
-    if (!file) return alert("Upload a file first");
 
-    setLoading(true);
-    setProgress(0);
-    setStatus(null);
-    setResult(null);
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("target_lang", targetLang);
-    formData.append("source_lang", "auto");
-
-    try {
-      const res = await fetch("/api/dub", { method: "POST", body: formData });
-      const data = await res.json();
-      console.log("Dubbing response data:", data);
-
-      if (!data.dubbing_id) {
-        alert("Dubbing failed: missing dubbing_id");
-        setLoading(false);
-        return;
-      }
-
-      setResult(data);
-      pollStatus(data.dubbing_id);
-    } catch (err) {
-      console.error(err);
-      alert("Dubbing failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const pollStatus = (id: string | undefined) => {
-    if (!id) return;
-  
+  const pollStatus = (id: string, key: string) => {
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/dub-status?id=${id}`);
         const data = await res.json();
         setStatus(data);
   
+        // Fake progress while processing
         if (data.status === "processing") {
           setProgress((prev) => (prev >= 90 ? prev : prev + 10));
         }
   
+        // When dubbing is done or failed
         if (data.status === "dubbed" || data.status === "failed") {
-          clearInterval(interval); // stop polling
+          clearInterval(interval);
+  
+          // If successful, set progress to 100
           if (data.status === "dubbed") setProgress(100);
+  
+          // Always attempt to clean up the S3 file after dubbing finishes
+          try {
+            await fetch("/api/delete-file", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ key }),
+            });
+          } catch (err) {
+            console.error("S3 cleanup failed:", err);
+          }
+  
+          // Alert if failed
           if (data.status === "failed") alert("Dubbing failed");
         }
       } catch (err) {
-        console.error(err);
+        console.error("Polling failed:", err);
         clearInterval(interval);
       }
     }, 5000);
   
-    // Return interval ID in case you need to clear manually elsewhere
-    return interval;
+    return interval; // in case you want to cancel manually elsewhere
   };
+
+  const handleSubmit = async () => {
+    if (!file) {
+      alert("Upload a file first");
+      return;
+    }
+
+    setLoading(true);
+    setProgress(0);
+    setStatus(null);
+    setResult(null);
+
+    try {
+      // 1️⃣ Request presigned S3 upload URL
+      const presignRes = await fetch("/api/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileType: file.type,
+        }),
+      });
+    
+      if (!presignRes.ok) throw new Error("Failed to get upload URL");
+    
+      const { uploadUrl, fileUrl, key } = await presignRes.json();
+    
+      // 2️⃣ Upload file directly to S3 with progress
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+    
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            setProgress(percent);
+          }
+        };
+    
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            resolve();
+          } else {
+            reject(new Error("S3 upload failed"));
+          }
+        };
+    
+        xhr.onerror = () => reject(new Error("S3 upload error"));
+    
+        xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.send(file);
+      });
+    
+      // 3️⃣ Call dubbing API with uploaded S3 URL
+      const dubRes = await fetch("/api/dub", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoUrl: fileUrl,
+          target_lang: targetLang,
+          source_lang: "auto",
+        }),
+      });
+    
+      const data = await dubRes.json();
+    
+      if (!data?.dubbing_id) {
+        throw new Error("Dubbing failed — missing dubbing_id");
+      }
+    
+      setResult(data);
+    
+      // 4️⃣ Extract S3 file key and start polling
+      const fileKey = key || fileUrl.split("/").pop(); // fallback to last URL segment
+      pollStatus(data.dubbing_id, fileKey);
+    
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Dubbing failed");
+    } finally {
+      setLoading(false);
+    }
+
 
   return (
     <div className="p-6 max-w-xl space-y-4">
@@ -161,7 +226,9 @@ export default function DubbingAgent() {
       />
 
       {fileSizeMB && (
-        <p className="text-sm text-gray-500">File size: {fileSizeMB.toFixed(1)} MB</p>
+        <p className="text-sm text-gray-500">
+          File size: {fileSizeMB.toFixed(1)} MB
+        </p>
       )}
 
       <select
@@ -180,15 +247,16 @@ export default function DubbingAgent() {
         onClick={handleSubmit}
         disabled={loading}
         className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded w-full transition"
-      >
-        {loading ? "Dubbing..." : "Dub File"}
+      >{loading
+        ? progress < 100
+          ? `Uploading... ${progress}%`
+          : "Processing..."
+        : "Dub File"}
       </button>
 
       {result && (
         <div className="mt-4 p-4 border border-gray-300 rounded space-y-2 text-gray-600 bg-gray-100 shadow-sm">
           <p><strong>Dubbing ID:</strong> {result.dubbing_id}</p>
-          <p><strong>Expected Duration:</strong> {result.expected_duration_sec}s</p>
-
           {status && <p><strong>Progress:</strong> {progress}%</p>}
 
           {progress > 0 && progress < 100 && (
@@ -202,29 +270,28 @@ export default function DubbingAgent() {
         </div>
       )}
 
-      {status?.status === "dubbed" && result?.dubbing_id && (status?.target_languages?.length ?? 0) > 0 && (
-        <div className="mt-6 p-4 border border-gray-300 rounded bg-gradient-to-br from-gray-100 to-gray-200 shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-700 mb-2">Your Dubbed Video</h2>
+      {status?.status === "dubbed" && result?.dubbing_id && (
+        <div className="mt-6 p-4 border border-gray-300 rounded bg-gray-100">
+          <h2 className="text-lg font-semibold text-gray-700 mb-2">
+            Your Dubbed Video
+          </h2>
+
           <video
             controls
             className="w-full mt-2 rounded"
-            src={`/api/fetch-dub?dubbing_id=${result.dubbing_id}&target_lang=${status.target_languages[0]}`}
+            src={`/api/fetch-dub?dubbing_id=${result.dubbing_id}&target_lang=${targetLang}`}
           />
+
           <a
-            href={`/api/fetch-dub?dubbing_id=${result.dubbing_id}&target_lang=${status.target_languages[0]}`}
-            download={`dubbed_${status.target_languages[0]}.mp4`}
+            href={`/api/fetch-dub?dubbing_id=${result.dubbing_id}&target_lang=${targetLang}`}
+            download={`dubbed_${targetLang}.mp4`}
             className="mt-3 inline-block bg-gray-500 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded transition"
           >
             Download Video
           </a>
         </div>
       )}
-
-      {status?.status === "dubbed" && (status?.target_languages?.length ?? 0) === 0 && (
-        <p className="mt-4 text-sm text-red-400">
-          Dubbing completed but no target language was registered. Please try again with a new file.
-        </p>
-      )}
     </div>
   );
+}
 }
