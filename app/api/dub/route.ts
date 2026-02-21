@@ -4,8 +4,6 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const { videoUrl, target_lang, source_lang } = await req.json();
-    console.log("Received:", { videoUrl, target_lang, source_lang }); // ← add this
-
 
     if (!videoUrl || !target_lang) {
       return NextResponse.json(
@@ -14,23 +12,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const formData = new FormData();
+    formData.append("source_url", videoUrl);
+    formData.append("target_lang", target_lang);
+    formData.append("name", "Dubbing Job");
+    formData.append("dubbing_studio", "false");
+
     const response = await fetch("https://api.elevenlabs.io/v1/dubbing", {
       method: "POST",
       headers: {
         "xi-api-key": process.env.ELEVENLABS_API_KEY!,
-        "Content-Type": "application/json",
+        // ⚠️ do NOT set Content-Type here — let fetch set it with the boundary
       },
-      body: JSON.stringify({
-        video_url: videoUrl,
-        target_lang,
-        source_lang: source_lang || "auto",
-        name: "Dubbing Job",
-        dubbing_studio: false,
-      }),
+      body: formData,
     });
 
     const data = await response.json();
-
     console.log("ElevenLabs status:", response.status);
     console.log("ElevenLabs body:", JSON.stringify(data));
 
