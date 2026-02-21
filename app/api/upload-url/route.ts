@@ -10,8 +10,9 @@ const s3 = new S3Client({
       accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
     },
-    requestChecksumCalculation: "WHEN_REQUIRED",  // ✅ disable auto-checksum
-    responseChecksumValidation: "WHEN_REQUIRED",  // ✅ disable auto-validation
+    forcePathStyle: false, // ✅ ensure virtual-hosted style (this is default, but be explicit)
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
   });
 
 export async function POST(req: Request) {
