@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const { videoUrl, target_lang, source_lang } = await req.json();
+    console.log("Received:", { videoUrl, target_lang, source_lang }); // ← add this
+
 
     if (!videoUrl || !target_lang) {
       return NextResponse.json(
