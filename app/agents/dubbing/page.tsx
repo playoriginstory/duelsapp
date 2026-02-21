@@ -134,6 +134,7 @@ export default function DubbingAgent() {
         xhr.onload = () => xhr.status === 200 ? resolve() : reject(new Error("S3 upload failed"));
         xhr.onerror = () => reject(new Error("S3 upload error"));
         xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader("Content-Type", file.type);
         xhr.send(file);
       });
 
