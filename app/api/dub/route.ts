@@ -29,6 +29,9 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json();
 
+    console.log("ElevenLabs status:", response.status);
+    console.log("ElevenLabs body:", JSON.stringify(data));
+
     if (!response.ok) {
       return NextResponse.json({ error: data }, { status: 500 });
     }
