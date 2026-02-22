@@ -206,7 +206,7 @@ export default function Home() {
     return !isTxSuccess ? (
       <Card className="w-full max-w-lg text-center">
         <CardContent className="!pt-6">
-          <p>Time to Level Up</p>
+          <p>Duels: Your Production Partner/</p>
           <select
             value={selectedChain}
             onChange={(e) =>
@@ -214,8 +214,7 @@ export default function Home() {
             }
             className="mt-4 w-full border p-2 rounded"
           >
-            <option value="lens">Base (OriginStory & Duels) - Login Coming Soon</option>
-            <option value="solana">Solana</option>
+            <option value="lens">Login Coming Soon</option>
           </select>
 
           {selectedChain === "lens" ? (

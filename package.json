@@ -30,6 +30,7 @@
     "@solana/wallet-adapter-wallets": "^0.19.32",
     "@solana/web3.js": "^1.98.0",
     "@tanstack/react-query": "^5.62.16",
+    "@virtuals-protocol/acp-node": "^0.3.0-beta.30",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
