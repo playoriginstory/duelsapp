@@ -25,6 +25,10 @@ export async function GET(req: NextRequest) {
 
   return new Response(elevenRes.body, {
     status: 200,
-    headers: { "Content-Type": contentType, "Cache-Control": "no-store" },
+    headers: {
+      "Content-Type": contentType,
+      "Cache-Control": "no-store",
+      "Access-Control-Allow-Origin": "*",
+    },
   });
 }
