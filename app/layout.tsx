@@ -6,6 +6,15 @@ import { Web3Provider } from "@/providers/Web3Provider";
 import WalletContextProvider from "@/providers/WalletContextProvider";
 import Navbar from "@/components/Header/Navbar";
 
+export const metadata: Metadata = {
+  title: "Duels",
+  other: {
+    "virtual-protocol-site-verification":
+      "1490b68018f209e64abd5ebcfc81cbd2",
+  },
+};
+
+
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -25,9 +34,7 @@ const jersey15 = Jersey_15({
   adjustFontFallback: false,
 });
 
-export const metadata: Metadata = {
-  title: "Duels",
-};
+
 
 export default function RootLayout({
   children,
