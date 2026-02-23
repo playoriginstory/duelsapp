@@ -8,12 +8,12 @@ import Navbar from "@/components/Header/Navbar";
 
 export const metadata: Metadata = {
   title: "Duels",
+  description: "Duels AI Production Agent",
   other: {
     "virtual-protocol-site-verification":
       "1490b68018f209e64abd5ebcfc81cbd2",
   },
 };
-
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -34,13 +34,11 @@ const jersey15 = Jersey_15({
   adjustFontFallback: false,
 });
 
-
-
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html
       lang="en"
@@ -57,12 +55,13 @@ export default function RootLayout({
                   width="500"
                   autoPlay
                   loop
+                  muted
+                  playsInline
                 >
                   <source
                     src="/assets/videos/duelsvideo.mp4"
                     type="video/mp4"
                   />
-                  Your browser doesn't support this video.
                 </video>
               </div>
               {children}
